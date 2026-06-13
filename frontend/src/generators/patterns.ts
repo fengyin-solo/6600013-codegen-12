@@ -1,3 +1,5 @@
+import { Delaunay } from 'd3-delaunay'
+
 // Seeded PRNG (mulberry32)
 export function createRng(seed: number) {
   let s = seed | 0
@@ -111,6 +113,34 @@ export function generateNoise(
       const color = palette[(row + col) % palette.length]
       paths += `<line x1="${x}" y1="${y}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`
     }
+  }
+  return paths
+}
+
+export function generateVoronoi(
+  w: number, h: number, iterations: number, scale: number,
+  palette: string[], rng: Rng, strokeWidth: number, opacity: number
+): string {
+  const pointCount = Math.min(200, Math.max(20, Math.floor(iterations / 2.5)))
+  const points: number[] = []
+  for (let i = 0; i < pointCount; i++) {
+    points.push(rng() * w)
+    points.push(rng() * h)
+  }
+  const delaunay = Delaunay.from(points)
+  const voronoi = delaunay.voronoi([0, 0, w, h])
+
+  let paths = ''
+  for (let i = 0; i < pointCount; i++) {
+    const cell = voronoi.cellPolygon(i)
+    if (!cell) continue
+    let d = ''
+    cell.forEach((pt, j) => {
+      d += (j === 0 ? 'M' : 'L') + pt[0].toFixed(1) + ',' + pt[1].toFixed(1)
+    })
+    d += 'Z'
+    const color = palette[i % palette.length]
+    paths += `<path d="${d}" fill="none" stroke="${color}" stroke-width="${strokeWidth}" opacity="${opacity}"/>`
   }
   return paths
 }
